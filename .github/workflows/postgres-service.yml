@@ -9,36 +9,6 @@ on:
       - main
 
 jobs:
-  # container-job:
-  #   runs-on: ubuntu-latest
-
-  #   # runs all of the steps inside the specified container rather than on the VM host.
-  #   # Because of this the network configuration changes from host based network to a container network.
-  #   container:
-  #     image: node:16-alpine
-
-  #   services:
-  #     postgres:
-  #       image: postgres:10.8
-  #       env:
-  #         POSTGRES_USER: postgres
-  #         POSTGRES_PASSWORD: postgres
-  #         POSTGRES_DB: postgres
-  #       ports:
-  #         - 5432:5432
-  #       # needed because the postgres container does not provide a healthcheck
-  #       options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - run: npm ci
-  #     - run: npm start
-  #       env:
-  #         # use postgres for the host here because we have specified a container for the job.
-  #         # If we were running the job on the VM this would be localhost
-  #         POSTGRES_HOST: postgres
-  #         POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
-
   # Runs all steps on the VM
   # The service containers will use host port binding instead of container networking so you access them via localhost rather than the service name
   vm-job:
@@ -67,3 +37,43 @@ jobs:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: ${{ job.services.postgres.ports[5432]  }} # get randomly assigned published port
           # POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }} # get randomly assigned published port
+
+  docker-job:
+    runs-on: ubuntu-latest
+    # convert above to service
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          tags: factor-api:latest
+          load: true
+          push: false
+
+      - name: Run test in docker image
+        run: |
+          docker run \
+            --rm \
+            --name factor-api-docker-test \
+            --network host \
+            -e POSTGRES_PORT=5432 \
+            -e POSTGRES_HOST=${{ job.services.postgres.ports[5432] }} \
+            factor/factor-api:latest \
