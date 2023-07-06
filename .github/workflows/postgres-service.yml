@@ -63,8 +63,8 @@ jobs:
       - name: Build docker image
         uses: docker/build-push-action@v4
         with:
-          context: .
-          tags: factor-api:latest
+          tags: factor/factor-api:latest
+          file: ./Dockerfile
           load: true
           push: false
 
