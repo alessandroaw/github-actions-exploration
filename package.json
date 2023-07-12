@@ -11,11 +11,13 @@
   "dependencies": {
     "ioredis": "^5.3.2",
     "pg": "^8.4.0",
+    "puppeteer": "^20.8.1",
     "reflect-metadata": "^0.1.13",
     "typeorm": "0.3.17"
   },
   "scripts": {
     "start": "ts-node src/index.ts",
+    "postgres": "ts-node src/postgres.ts",
     "redis": "ts-node src/redis.ts",
     "typeorm": "typeorm-ts-node-commonjs"
   }

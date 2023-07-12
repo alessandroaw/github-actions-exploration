@@ -1,25 +1,44 @@
-import { AppDataSource } from "./data-source";
-import { User } from "./entity/User";
+import puppeteer from "puppeteer";
 
-AppDataSource.initialize()
-  .then(async () => {
-    console.log("Inserting a new user into the database...");
-    const user = new User();
-    user.firstName = "Timber";
-    user.lastName = "Saw";
-    user.age = 25;
-    await AppDataSource.manager.save(user);
-    console.log("Saved a new user with id: " + user.id);
+type PoolDetail = {
+  tvl: number;
+  apy: number;
+};
 
-    console.log("Loading users from the database...");
-    const users = await AppDataSource.manager.find(User);
-    console.log("Loaded users: ", users);
+const getPoolDetail = async () => {
+  // if (this.poolDetail) return this.poolDetail;
 
-    console.log(
-      "Here you can setup and run express / fastify / any other framework."
-    );
-  })
-  .catch((error) => {
-    console.log(error);
-    throw error;
+  const browser = await puppeteer.launch({
+    headless: "new",
+    executablePath: "/usr/bin/chromium-browser",
+    args: [
+      "--disable-gpu",
+      "--disable-setuid-sandbox",
+      "--no-sandbox",
+      "--no-zygote",
+    ],
   });
+  const page = await browser.newPage();
+
+  await page.goto("https://pirex.io/vaults/pxgmx");
+
+  // Set screen size
+  await page.setViewport({ width: 1080, height: 1024 });
+  await page.waitForNetworkIdle();
+  const values = await page.$$eval("div.mantine-3zl18c", (nodes) => {
+    const realValue = nodes.map((n) => n.innerText);
+    return realValue;
+  });
+  console.log(values);
+  if (!values || values.length < 2) {
+    throw new Error("Cannot get Redacted APY and TVL from source!");
+  }
+  const apyText = parseFloat(values[0]!.replace("%", "").replace(/,/g, ""));
+  const tvlText = parseFloat(values[1]!.replace("$", "").replace(/,/g, ""));
+
+  const poolDetail: PoolDetail = { tvl: +tvlText, apy: +apyText };
+  await browser.close();
+  return poolDetail;
+};
+
+getPoolDetail();
