@@ -3,7 +3,7 @@ name: Postgres Service Example
 on:
   push:
     branches:
-      - main
+      - postgres
   pull_request:
     branches:
       - main
