@@ -11,72 +11,69 @@ on:
 jobs:
   # Runs all steps on the VM
   # The service containers will use host port binding instead of container networking so you access them via localhost rather than the service name
-  vm-job:
-    runs-on: ubuntu-latest
+  # vm-job:
+  #   runs-on: ubuntu-latest
 
+  # services:
+  #   redis:
+  #     image: redis
+  #     ports:
+  #       - 6379:6379
+  #     options: >-
+  #       --health-cmd "redis-cli ping"
+  #       --health-interval 10s
+  #       --health-timeout 5s
+  #       --health-retries 5
+  # options: --entrypoint redis-server
+
+  # steps:
+  #   - uses: actions/checkout@v3
+  #   - run: npm ci
+  #   - run: npm start
+  # env:
+  #   REDIS_URL: redis://localhost
+  # REDIS_HOST: localhost
+  # REDIS_PORT: ${{ job.services.redis.ports[6379] }}
+  # use localhost for the host here because we are running the job on the VM.
+  # If we were running the job on in a container this would be postgres
+  # POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }} # get randomly assigned published port
+
+  docker-job:
+    runs-on: ubuntu-latest
+    # convert above to service
     # services:
-    #   redis:
-    #     image: redis
+    #   postgres:
+    #     image: postgres
+    #     env:
+    #       POSTGRES_DB: postgres
+    #       POSTGRES_USER: postgres
+    #       POSTGRES_PASSWORD: postgres
     #     ports:
-    #       - 6379:6379
+    #       - 5432:5432
     #     options: >-
-    #       --health-cmd "redis-cli ping"
+    #       --health-cmd pg_isready
     #       --health-interval 10s
     #       --health-timeout 5s
     #       --health-retries 5
-    # options: --entrypoint redis-server
 
     steps:
-      - uses: actions/checkout@v3
-      - run: npm ci
-      - run: npm start
-        # env:
-        #   REDIS_URL: redis://localhost
-        # REDIS_HOST: localhost
-        # REDIS_PORT: ${{ job.services.redis.ports[6379] }}
-        # use localhost for the host here because we are running the job on the VM.
-        # If we were running the job on in a container this would be postgres
-        # POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }} # get randomly assigned published port
+      - name: Checkout
+        uses: actions/checkout@v3
 
-  # docker-job:
-  #   runs-on: ubuntu-latest
-  #   # convert above to service
-  #   services:
-  #     postgres:
-  #       image: postgres
-  #       env:
-  #         POSTGRES_DB: postgres
-  #         POSTGRES_USER: postgres
-  #         POSTGRES_PASSWORD: postgres
-  #       ports:
-  #         - 5432:5432
-  #       options: >-
-  #         --health-cmd pg_isready
-  #         --health-interval 10s
-  #         --health-timeout 5s
-  #         --health-retries 5
+      - name: Build docker image
+        uses: docker/build-push-action@v4
+        with:
+          tags: factor/factor-api:latest
+          file: ./Dockerfile
+          load: true
+          push: false
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-
-  #     - name: Build docker image
-  #       uses: docker/build-push-action@v4
-  #       with:
-  #         tags: factor/factor-api:latest
-  #         file: ./Dockerfile
-  #         load: true
-  #         push: false
-
-  #     - name: Run test in docker image localhost
-  #       run: |
-  #         docker run \
-  #           --rm \
-  #           --name factor-api-docker-test \
-  #           --network host \
-  #           -e POSTGRES_PORT=${{ job.services.postgres.ports[5432] }} \
-  #           -e POSTGRES_HOST=localhost \
-  #           factor/factor-api:latest
+      - name: Run test in docker image localhost
+        run: |
+          docker run \
+            --rm \
+            --name factor-api-docker-test \
+            factor/factor-api:latest
 
   #     - name: Run test in docker image 127.0.0.1
   #       run: |
